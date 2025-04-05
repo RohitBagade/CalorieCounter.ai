@@ -1,4 +1,4 @@
-// index.js (Enhanced Debugging for AI response issue)
+// index.js (Updated with improved prompt parsing food item and quantity)
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
@@ -21,17 +21,17 @@ app.post("/chat", async (req, res) => {
       return res.status(500).json({ error: "Missing API Key. Check .env file." });
     }
 
-    const formattedPrompt = `For each food item listed, return only a JSON array with the following fields: 
-    - food: Name of the food item
-    - quantity: Provided quantity
-    - calories: Estimated calorie value
-    - protein: Estimated protein in grams
-    - carbs: Estimated carbs in grams
-    - fats: Estimated fats in grams
-    
-    Strictly return JSON only, without any explanations or extra text.
-    If product is not available, don't add that into the list.
-    
+    const formattedPrompt = `From the given list of meals or ingredients, extract and standardize each food entry in the following JSON format:
+    - food: Extracted Standard name of the food item (e.g. "boiled chicken breast")
+    - quantity: Extracted from the user input (e.g. "100gm", "2 eggs", etc.)
+    - calories: Total estimated calories based on quantity using nutritional standards
+    - protein: Total protein in grams
+    - carbs: Total carbohydrates in grams
+    - fats: Total fats in grams
+
+    Strictly return a JSON array only. Do not include explanations, headers, markdown, or extra characters.
+    If an item is unrecognizable or ambiguous, exclude it.
+
     Now process this input:
     ${userPrompt}`;
 
