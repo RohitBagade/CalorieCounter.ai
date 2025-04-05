@@ -112,10 +112,10 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
           ))}
           <tr className="total-row">
             <td colSpan="2"><strong>Total</strong></td>
-            <td><strong>{total("calories")}</strong></td>
-            <td><strong>{total("protein")}g</strong></td>
-            <td><strong>{total("carbs")}g</strong></td>
-            <td><strong>{total("fats")}g</strong></td>
+            <td><strong>{Math.round(total("calories"))}</strong></td>
+            <td><strong>{total("protein").toFixed(1)}g</strong></td>
+            <td><strong>{total("carbs").toFixed(1)}g</strong></td>
+            <td><strong>{total("fats").toFixed(1)}g</strong></td>
           </tr>
         </tbody>
       </table>
