@@ -21,7 +21,7 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
     const prompt = foodItems.map((item) => item.title).join("\n");
     try {
       const { data } = await axios.post(
-        import.meta.env.VITE_API_URL || "http://localhost:8080/chat",
+        import.meta.env.VITE_REACT_APP_API_URL,
         { prompt }
       );
       setProgress(100);
