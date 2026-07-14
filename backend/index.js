@@ -1,82 +1,87 @@
-// index.js (Updated with improved prompt parsing food item and quantity)
+// CalorieCounter.ai — backend. Extracts food macros via OpenAI.
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
-const app = express();
-app.use(express.json());
-app.use(cors());
-
 const API_KEY = process.env.OPENAI_API_KEY;
-const API_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const PORT = process.env.PORT || 8080;
+const MAX_PROMPT_CHARS = 2000;
 
-app.post("/chat", async (req, res) => {
+// Fail fast — don't boot a server that can't do its one job.
+if (!API_KEY) {
+  console.error("[FATAL] OPENAI_API_KEY is not set. Copy .env.example to .env and fill it in.");
+  process.exit(1);
+}
+
+const app = express();
+app.use(express.json({ limit: "16kb" }));
+
+// CORS: only allow the known frontend origin(s). Comma-separated CORS_ORIGIN in prod.
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,http://localhost:3000")
+  .split(",")
+  .map((s) => s.trim());
+app.use(cors({ origin: allowedOrigins }));
+
+// Rate limit the (paid) AI endpoint so a public deploy can't drain the OpenAI budget.
+const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please try again in a few minutes." },
+});
+
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+app.post("/chat", chatLimiter, async (req, res) => {
+  // Validate input before spending a token.
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  if (!prompt) return res.status(400).json({ error: "A non-empty 'prompt' is required." });
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    return res.status(400).json({ error: `Prompt too long (max ${MAX_PROMPT_CHARS} characters).` });
+  }
+
+  const instruction = `From the given list of meals or ingredients, extract and standardize each food entry.
+Return JSON shaped exactly as: { "items": [ { "food": string, "quantity": string, "calories": number, "protein": number, "carbs": number, "fats": number } ] }
+- food: standardized name (e.g. "boiled chicken breast")
+- quantity: as given by the user (e.g. "100gm", "2 eggs")
+- calories/protein/carbs/fats: totals for that quantity using nutritional standards (grams for macros)
+Exclude any item that is unrecognizable or ambiguous.
+
+Input:
+${prompt}`;
+
   try {
-    const userPrompt = req.body.prompt;
-    console.log("[DEBUG] Received user input:", userPrompt);
-
-    if (!API_KEY) {
-      console.error("[ERROR] Missing API Key. Ensure OPENAI_API_KEY is set in the .env file.");
-      return res.status(500).json({ error: "Missing API Key. Check .env file." });
-    }
-
-    const formattedPrompt = `From the given list of meals or ingredients, extract and standardize each food entry in the following JSON format:
-    - food: Extracted Standard name of the food item (e.g. "boiled chicken breast")
-    - quantity: Extracted from the user input (e.g. "100gm", "2 eggs", etc.)
-    - calories: Total estimated calories based on quantity using nutritional standards
-    - protein: Total protein in grams
-    - carbs: Total carbohydrates in grams
-    - fats: Total fats in grams
-
-    Strictly return a JSON array only. Do not include explanations, headers, markdown, or extra characters.
-    If an item is unrecognizable or ambiguous, exclude it.
-
-    Now process this input:
-    ${userPrompt}`;
-
-    console.log("[DEBUG] Formatted prompt sent to AI:", formattedPrompt);
-
     const response = await axios.post(
-      API_URL,
+      OPENAI_URL,
       {
-        model: "gpt-4",
+        model: MODEL,
         messages: [
-          { role: "system", content: "You are a helpful nutrition assistant. Respond with JSON only." },
-          { role: "user", content: formattedPrompt }
+          { role: "system", content: "You are a precise nutrition assistant. Respond with JSON only." },
+          { role: "user", content: instruction },
         ],
-        temperature: 0.5,
+        temperature: 0.3,
+        max_tokens: 1000,
+        response_format: { type: "json_object" }, // guarantees parseable JSON
       },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-      }
+      { headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" }, timeout: 30000 }
     );
 
-    console.log("[DEBUG] Raw AI response received:", JSON.stringify(response.data, null, 2));
+    const content = response.data?.choices?.[0]?.message?.content;
+    if (!content) return res.status(502).json({ error: "The AI returned an empty response. Try again." });
 
-    if (!response.data.choices || response.data.choices.length === 0) {
-      console.error("[ERROR] Invalid AI response structure:", JSON.stringify(response.data, null, 2));
-      return res.status(500).json({ error: "Invalid AI response structure", details: response.data });
-    }
-
-    const jsonResponse = response.data.choices[0].message.content.trim();
-    console.log("[DEBUG] Parsed AI JSON response:", jsonResponse);
-
-    try {
-      res.json({ response: JSON.parse(jsonResponse) });
-    } catch (parseError) {
-      console.error("[ERROR] Failed to parse AI JSON response:", jsonResponse);
-      return res.status(500).json({ error: "AI response is not valid JSON", details: jsonResponse });
-    }
+    const parsed = JSON.parse(content); // json_object mode → always valid JSON
+    const items = Array.isArray(parsed.items) ? parsed.items : [];
+    return res.json({ response: items });
   } catch (error) {
-    console.error("[ERROR] Exception in AI response fetching:", error);
-    if (error.response) {
-      console.error("[ERROR] API Response Status:", error.response.status);
-      console.error("[ERROR] API Response Data:", JSON.stringify(error.response.data, null, 2));
-    }
-    res.status(500).json({ error: "Failed to get AI response", details: error.response ? error.response.data : error.message });
+    // Log details server-side; never leak provider internals to the client.
+    console.error("[ERROR] /chat failed:", error.response?.status, error.response?.data || error.message);
+    return res.status(502).json({ error: "Couldn't analyze that right now. Please try again." });
   }
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`[INFO] Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`[INFO] Server running on port ${PORT} (model: ${MODEL})`));

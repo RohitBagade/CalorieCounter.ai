@@ -20,10 +20,8 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
     setProgress(10);
     const prompt = foodItems.map((item) => item.title).join("\n");
     try {
-      const { data } = await axios.post(
-        import.meta.env.VITE_REACT_APP_API_URL,
-        { prompt }
-      );
+      const apiUrl = import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:8080/chat";
+      const { data } = await axios.post(apiUrl, { prompt });
       setProgress(100);
       setCachedResponse(data.response || []);
       return data.response || [];
@@ -37,10 +35,11 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
     queryKey: ["fetchResponse", foodItems, shouldUseCache],
     queryFn: shouldUseCache && cachedResponse ? () => cachedResponse : fetchResponse,
     enabled: foodItems.length > 0,
-    onSuccess: (data) => {
-      setShowResponse(true);
-    },
   });
+
+  useEffect(() => {
+    if (response.length) setShowResponse(true);
+  }, [response, setShowResponse]);
 
   const handleBackClick = () => {
     setShowResponse(false);
@@ -71,11 +70,18 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
   }
 
   if (error) {
+    const msg =
+      error.response?.data?.error ||
+      "Couldn't reach the calorie service. Check your connection and try again.";
     return (
       <div className="response">
-        <h2>Error fetching AI response.</h2>
-        <p>Please check your internet connection and try again.</p>
-        <pre>{JSON.stringify(error.response?.data || error.message, null, 2)}</pre>
+        <div className="response-header">
+          <h2>Something went wrong</h2>
+          <div className="back-icon" onClick={handleBackClick}>
+            <FaArrowLeft />
+          </div>
+        </div>
+        <p>{msg}</p>
       </div>
     );
   }
