@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { FaArrowLeft } from "react-icons/fa";
 
-export default function CalorieResponse({ foodItems, setShowResponse, setFoodItems, shouldUseCache, cachedResponse, setCachedResponse }) {
+export default function CalorieResponse({ foodItems, setShowResponse, setFoodItems }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -23,7 +23,6 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
       const apiUrl = import.meta.env.VITE_REACT_APP_API_URL || "http://localhost:8080/chat";
       const { data } = await axios.post(apiUrl, { prompt });
       setProgress(100);
-      setCachedResponse(data.response || []);
       return data.response || [];
     } catch (error) {
       console.error("[ERROR] Failed to fetch AI response:", error.response ? error.response.data : error.message);
@@ -32,9 +31,11 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
   };
 
   const { data: response = [], error, isLoading } = useQuery({
-    queryKey: ["fetchResponse", foodItems, shouldUseCache],
-    queryFn: shouldUseCache && cachedResponse ? () => cachedResponse : fetchResponse,
+    // Keyed on the food list → React Query caches identical lists automatically.
+    queryKey: ["fetchResponse", foodItems],
+    queryFn: fetchResponse,
     enabled: foodItems.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -90,10 +91,11 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
     <div className="response">
       <div className="response-header">
         <h2>AI Calorie Breakdown</h2>
-        <div className="back-icon" onClick={handleBackClick}>
+        <button type="button" className="back-icon" onClick={handleBackClick} aria-label="Go back">
           <FaArrowLeft />
-        </div>
+        </button>
       </div>
+      <div className="table-wrap">
       <table className="calorie-table">
         <thead>
           <tr>
@@ -125,6 +127,7 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

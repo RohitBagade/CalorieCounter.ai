@@ -6,40 +6,34 @@ import CalorieResponse from "./CalorieResponse";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
+const STORAGE_KEY = "cc.foodItems";
 
 function MainApp() {
-  const [foodItems, setFoodItems] = useState([]);
+  // Persist the food list so a refresh doesn't wipe it.
+  const [foodItems, setFoodItems] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
   const [showResponse, setShowResponse] = useState(false);
-  const [cachedResponse, setCachedResponse] = useState(null);
-  const [shouldUseCache, setShouldUseCache] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(foodItems));
+  }, [foodItems]);
 
   function addFoodItem(title) {
-    setFoodItems((currentItems) => [
-      ...currentItems,
-      { id: crypto.randomUUID(), title },
-    ]);
+    setFoodItems((items) => [...items, { id: crypto.randomUUID(), title }]);
   }
 
   function editFoodItem(id, newTitle) {
-    setFoodItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === id ? { ...item, title: newTitle } : item
-      )
-    );
+    setFoodItems((items) => items.map((it) => (it.id === id ? { ...it, title: newTitle } : it)));
   }
 
   function deleteFoodItem(id) {
-    setFoodItems((currentItems) => currentItems.filter((item) => item.id !== id));
-  }
-
-  function handleCalculate(triggerSource = null) {
-    if (triggerSource === "USE_CACHE" && cachedResponse) {
-      setShouldUseCache(true);
-      setShowResponse(true);
-    } else {
-      setShouldUseCache(false);
-      setShowResponse(true);
-    }
+    setFoodItems((items) => items.filter((it) => it.id !== id));
   }
 
   return (
@@ -47,24 +41,16 @@ function MainApp() {
       <FoodEntryForm
         foodItems={foodItems}
         onSubmit={addFoodItem}
-        handleCalculate={handleCalculate}
+        onCalculate={() => setShowResponse(true)}
         showCalculate={!showResponse}
-        setShowResponse={setShowResponse}
       />
       {!showResponse ? (
-        <FoodList
-          foodItems={foodItems}
-          deleteFoodItem={deleteFoodItem}
-          editFoodItem={editFoodItem}
-        />
+        <FoodList foodItems={foodItems} deleteFoodItem={deleteFoodItem} editFoodItem={editFoodItem} />
       ) : (
         <CalorieResponse
           foodItems={foodItems}
           setShowResponse={setShowResponse}
           setFoodItems={setFoodItems}
-          shouldUseCache={shouldUseCache}
-          cachedResponse={cachedResponse}
-          setCachedResponse={setCachedResponse}
         />
       )}
     </div>

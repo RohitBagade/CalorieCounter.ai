@@ -1,40 +1,21 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { FaSun, FaMoon } from "react-icons/fa";
 import "./styles.css";
 
-export default function FoodEntryForm({ foodItems, onSubmit, handleCalculate, showCalculate, setShowResponse }) {
+export default function FoodEntryForm({ foodItems, onSubmit, onCalculate, showCalculate }) {
   const [newItem, setNewItem] = useState("");
-  const previousFoodListRef = useRef(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("cc.dark") === "1");
 
   useEffect(() => {
     document.body.classList.toggle("dark-mode", darkMode);
+    localStorage.setItem("cc.dark", darkMode ? "1" : "0");
   }, [darkMode]);
 
   function handleAddSubmit(e) {
     e.preventDefault();
     if (newItem.trim() === "") return;
-    onSubmit(newItem);
+    onSubmit(newItem.trim());
     setNewItem("");
-  }
-
-  function handleCalorieCount() {
-    if (foodItems.length === 0) {
-      alert("Please add some food items!");
-      return;
-    }
-
-    const currentFoodListString = JSON.stringify(foodItems);
-    const previousList = previousFoodListRef.current;
-
-    if (previousList === currentFoodListString) {
-      handleCalculate("USE_CACHE");
-    } else {
-      handleCalculate();
-    }
-
-    previousFoodListRef.current = currentFoodListString; // Update after check
-    setShowResponse(true);
   }
 
   return (
@@ -48,9 +29,10 @@ export default function FoodEntryForm({ foodItems, onSubmit, handleCalculate, sh
         {darkMode ? <FaSun /> : <FaMoon />}
       </button>
 
-      <form className="food-entry-form">
+      <form className="food-entry-form" onSubmit={handleAddSubmit}>
         <div className="form-row">
           <h1 className="header">Calorie Counter</h1>
+          <label htmlFor="item" className="sr-only">Food item and quantity</label>
           <input
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
@@ -60,12 +42,17 @@ export default function FoodEntryForm({ foodItems, onSubmit, handleCalculate, sh
           />
         </div>
 
-        <button className="btn" onClick={handleAddSubmit}>
+        <button className="btn" type="submit">
           Add Food Item
         </button>
 
         {showCalculate && (
-          <button className="btn" type="button" onClick={handleCalorieCount} disabled={foodItems.length === 0}>
+          <button
+            className="btn"
+            type="button"
+            onClick={onCalculate}
+            disabled={foodItems.length === 0}
+          >
             Calculate Calories
           </button>
         )}
