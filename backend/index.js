@@ -18,6 +18,9 @@ if (!API_KEY) {
 }
 
 const app = express();
+// Behind Fly/Vercel/Render proxies: trust the first proxy so express-rate-limit
+// reads the real client IP from X-Forwarded-For (and doesn't throw on it).
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "16kb" }));
 
 // CORS: only allow the known frontend origin(s). Comma-separated CORS_ORIGIN in prod.
