@@ -3,11 +3,10 @@
 Type what you ate in plain English — *"2 boiled eggs, 100g chicken breast, a banana"* — and get an
 instant **calorie + macro breakdown** (protein / carbs / fats), powered by AI.
 
-**Live demo:** _add your deployed link here_
-**Stack:** React (Vite) · Express · OpenAI · TanStack Query
+**Live demo:** https://caloriecounter-ai-rohit-bagades-projects.vercel.app
+**Stack:** React (Vite) · Express · OpenAI · TanStack Query · deployed on Vercel + Fly.io
 
-<!-- Add a screenshot or GIF here — it's the first thing a reviewer looks at -->
-<!-- ![CalorieCounter.ai](docs/screenshot.png) -->
+![CalorieCounter.ai](docs/screenshot.png)
 
 ---
 
