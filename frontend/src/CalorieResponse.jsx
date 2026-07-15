@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaFire, FaDrumstickBite, FaBreadSlice, FaTint } from "react-icons/fa";
 
 export default function CalorieResponse({ foodItems, setShowResponse, setFoodItems }) {
   const [progress, setProgress] = useState(0);
@@ -78,14 +78,22 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
       <div className="response">
         <div className="response-header">
           <h2>Something went wrong</h2>
-          <div className="back-icon" onClick={handleBackClick}>
+          <button type="button" className="back-icon" onClick={handleBackClick} aria-label="Go back">
             <FaArrowLeft />
-          </div>
+          </button>
         </div>
         <p>{msg}</p>
       </div>
     );
   }
+
+  const cals = Math.round(total("calories"));
+  const macros = [
+    { key: "protein", label: "Protein", grams: total("protein"), icon: <FaDrumstickBite />, cls: "m-protein" },
+    { key: "carbs", label: "Carbs", grams: total("carbs"), icon: <FaBreadSlice />, cls: "m-carbs" },
+    { key: "fats", label: "Fats", grams: total("fats"), icon: <FaTint />, cls: "m-fats" },
+  ];
+  const macroSum = macros.reduce((s, m) => s + m.grams, 0) || 1;
 
   return (
     <div className="response">
@@ -95,6 +103,29 @@ export default function CalorieResponse({ foodItems, setShowResponse, setFoodIte
           <FaArrowLeft />
         </button>
       </div>
+
+      <div className="macro-summary">
+        <div className="cal-hero">
+          <FaFire className="cal-fire" />
+          <div className="cal-text">
+            <span className="cal-num">{cals}</span>
+            <span className="cal-label">total calories</span>
+          </div>
+        </div>
+        <div className="macro-cards">
+          {macros.map((m) => (
+            <div key={m.key} className={`macro-card ${m.cls}`}>
+              <span className="macro-icon">{m.icon}</span>
+              <span className="macro-grams">{m.grams.toFixed(1)}g</span>
+              <span className="macro-label">{m.label}</span>
+              <div className="macro-bar">
+                <div className="macro-fill" style={{ width: `${(m.grams / macroSum) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="table-wrap">
       <table className="calorie-table">
         <thead>

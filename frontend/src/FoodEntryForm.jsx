@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { FaSun, FaMoon } from "react-icons/fa";
+import { FaSun, FaMoon, FaPlus, FaBolt } from "react-icons/fa";
 import "./styles.css";
+
+const SUGGESTIONS = [
+  "2 boiled eggs",
+  "100g grilled chicken",
+  "1 bowl of rice",
+  "1 banana",
+  "100g paneer",
+];
 
 export default function FoodEntryForm({ foodItems, onSubmit, onCalculate, showCalculate }) {
   const [newItem, setNewItem] = useState("");
@@ -20,43 +28,64 @@ export default function FoodEntryForm({ foodItems, onSubmit, onCalculate, showCa
 
   return (
     <>
-      <button
-        type="button"
-        className="theme-toggle-icon"
-        onClick={() => setDarkMode((prev) => !prev)}
-        aria-label="Toggle theme"
-      >
-        {darkMode ? <FaSun /> : <FaMoon />}
-      </button>
-
-      <form className="food-entry-form" onSubmit={handleAddSubmit}>
-        <div className="form-row">
-          <h1 className="header">Calorie Counter</h1>
-          <label htmlFor="item" className="sr-only">Food item and quantity</label>
-          <input
-            value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
-            type="text"
-            placeholder="Enter food item and quantity..."
-            id="item"
-          />
-        </div>
-
-        <button className="btn" type="submit">
-          Add Food Item
+      {/* Hero banner */}
+      <div className="hero">
+        <div className="hero-overlay" />
+        <button
+          type="button"
+          className="theme-toggle-icon"
+          onClick={() => setDarkMode((prev) => !prev)}
+          aria-label="Toggle theme"
+        >
+          {darkMode ? <FaSun /> : <FaMoon />}
         </button>
+        <div className="hero-content">
+          <span className="hero-badge"><FaBolt /> AI-powered</span>
+          <h1 className="hero-title">
+            Calorie<span className="accent">Counter</span>
+          </h1>
+          <p className="hero-tagline">Type what you ate — get instant calories &amp; macros.</p>
+        </div>
+      </div>
 
-        {showCalculate && (
-          <button
-            className="btn"
-            type="button"
-            onClick={onCalculate}
-            disabled={foodItems.length === 0}
-          >
-            Calculate Calories
-          </button>
-        )}
-      </form>
+      <div className="panel-body">
+        <form className="food-entry-form" onSubmit={handleAddSubmit}>
+          <label htmlFor="item" className="sr-only">Food item and quantity</label>
+          <div className="input-wrap">
+            <input
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              type="text"
+              placeholder="e.g. 2 eggs, 100g rice, a banana..."
+              id="item"
+            />
+            <button className="btn btn-add" type="submit" aria-label="Add food item">
+              <FaPlus />
+            </button>
+          </div>
+
+          {showCalculate && (
+            <button
+              className="btn btn-primary btn-calc"
+              type="button"
+              onClick={onCalculate}
+              disabled={foodItems.length === 0}
+            >
+              <FaBolt /> Calculate Calories
+            </button>
+          )}
+        </form>
+
+        {/* Quick-add suggestions */}
+        <div className="suggestions">
+          <span className="suggestions-label">Try:</span>
+          {SUGGESTIONS.map((s) => (
+            <button key={s} type="button" className="chip" onClick={() => onSubmit(s)}>
+              <FaPlus className="chip-plus" /> {s}
+            </button>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
