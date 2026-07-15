@@ -3,13 +3,13 @@ const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
+const { validatePrompt } = require("./validate");
 require("dotenv").config();
 
 const API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const PORT = process.env.PORT || 8080;
-const MAX_PROMPT_CHARS = 2000;
 
 // Fail fast — don't boot a server that can't do its one job.
 if (!API_KEY) {
@@ -42,11 +42,9 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.post("/chat", chatLimiter, async (req, res) => {
   // Validate input before spending a token.
-  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
-  if (!prompt) return res.status(400).json({ error: "A non-empty 'prompt' is required." });
-  if (prompt.length > MAX_PROMPT_CHARS) {
-    return res.status(400).json({ error: `Prompt too long (max ${MAX_PROMPT_CHARS} characters).` });
-  }
+  const check = validatePrompt(req.body?.prompt);
+  if (!check.ok) return res.status(400).json({ error: check.error });
+  const prompt = check.prompt;
 
   const instruction = `From the given list of meals or ingredients, extract and standardize each food entry.
 Return JSON shaped exactly as: { "items": [ { "food": string, "quantity": string, "calories": number, "protein": number, "carbs": number, "fats": number } ] }

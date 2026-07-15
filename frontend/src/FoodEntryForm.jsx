@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { FaSun, FaMoon, FaPlus, FaBolt } from "react-icons/fa";
+import { FaSun, FaMoon, FaPlus, FaBolt, FaMicrophone } from "react-icons/fa";
+import { useSpeechInput } from "./useSpeechInput";
 import "./styles.css";
 
 const SUGGESTIONS = [
@@ -13,6 +14,7 @@ const SUGGESTIONS = [
 export default function FoodEntryForm({ foodItems, onSubmit, onCalculate, showCalculate }) {
   const [newItem, setNewItem] = useState("");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("cc.dark") === "1");
+  const { listening, supported: micSupported, toggle: toggleMic } = useSpeechInput(setNewItem);
 
   useEffect(() => {
     document.body.classList.toggle("dark-mode", darkMode);
@@ -44,25 +46,43 @@ export default function FoodEntryForm({ foodItems, onSubmit, onCalculate, showCa
           <h1 className="hero-title">
             Calorie<span className="accent">Counter</span>
           </h1>
-          <p className="hero-tagline">Type what you ate — get instant calories &amp; macros.</p>
+          <p className="hero-tagline">Say or type what you ate — get instant calories &amp; macros.</p>
         </div>
       </div>
 
       <div className="panel-body">
         <form className="food-entry-form" onSubmit={handleAddSubmit}>
           <label htmlFor="item" className="sr-only">Food item and quantity</label>
-          <div className="input-wrap">
+          <div className={`input-wrap ${listening ? "is-listening" : ""}`}>
             <input
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
               type="text"
-              placeholder="e.g. 2 eggs, 100g rice, a banana..."
+              placeholder={listening ? "Listening… speak now" : "e.g. 2 eggs, 100g rice, a banana..."}
               id="item"
             />
-            <button className="btn btn-add" type="submit" aria-label="Add food item">
-              <FaPlus />
-            </button>
+            <div className="input-actions">
+              {micSupported && (
+                <button
+                  type="button"
+                  className={`btn btn-mic ${listening ? "listening" : ""}`}
+                  onClick={toggleMic}
+                  aria-label={listening ? "Stop listening" : "Speak your food"}
+                  aria-pressed={listening}
+                >
+                  <FaMicrophone />
+                </button>
+              )}
+              <button className="btn btn-add" type="submit" aria-label="Add food item">
+                <FaPlus />
+              </button>
+            </div>
           </div>
+          {micSupported && (
+            <p className="mic-hint">
+              {listening ? "Listening — say your food, then tap +" : "Tip: tap the mic and just say it."}
+            </p>
+          )}
 
           {showCalculate && (
             <button
